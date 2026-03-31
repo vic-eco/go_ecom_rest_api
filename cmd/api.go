@@ -3,7 +3,10 @@ package main
 import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"log"
+	"github.com/jackc/pgx/v5"
+	repo "github.com/vic-eco/go_ecom_rest_api/internal/postgresql/sqlc"
+	"github.com/vic-eco/go_ecom_rest_api/internal/products"
+	"log/slog"
 	"net/http"
 	"time"
 )
@@ -22,6 +25,10 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("all good"))
 	})
 
+	productService := products.NewService(repo.New(app.db))
+	productHandler := products.NewHandler(productService)
+	r.Get("/products", productHandler.ListProducts)
+
 	return r
 }
 
@@ -34,13 +41,14 @@ func (app *application) run(h http.Handler) error {
 		IdleTimeout:  time.Minute,
 	}
 
-	log.Printf("server started at addr: %s", app.config.addr)
+	slog.Info("server started", "addr", app.config.addr)
 
 	return srv.ListenAndServe()
 }
 
 type application struct {
 	config config
+	db     *pgx.Conn
 }
 
 type config struct {
