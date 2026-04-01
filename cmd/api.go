@@ -4,6 +4,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5"
+	"github.com/vic-eco/go_ecom_rest_api/internal/json"
+	"github.com/vic-eco/go_ecom_rest_api/internal/orders"
 	repo "github.com/vic-eco/go_ecom_rest_api/internal/postgresql/sqlc"
 	"github.com/vic-eco/go_ecom_rest_api/internal/products"
 	"log/slog"
@@ -22,12 +24,18 @@ func (app *application) mount() http.Handler {
 	r.Use(middleware.Timeout(60 * time.Second))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("all good"))
+		json.Write(w, http.StatusOK, "all good!")
 	})
 
 	productService := products.NewService(repo.New(app.db))
 	productHandler := products.NewHandler(productService)
 	r.Get("/products", productHandler.ListProducts)
+	r.Get("/products/{id}", productHandler.FindProductByID)
+	r.Post("/products", productHandler.CreateProduct)
+
+	orderService := orders.NewService(repo.New(app.db), app.db)
+	orderHandler := orders.NewHandler(orderService)
+	r.Post("/orders", orderHandler.PlaceOrder)
 
 	return r
 }
