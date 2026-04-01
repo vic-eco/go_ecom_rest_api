@@ -1,10 +1,12 @@
 package orders
 
 import (
+	"github.com/go-chi/chi/v5"
 	"github.com/vic-eco/go_ecom_rest_api/internal/errors"
 	"github.com/vic-eco/go_ecom_rest_api/internal/json"
 	"log/slog"
 	"net/http"
+	"strconv"
 )
 
 type handler struct {
@@ -56,5 +58,32 @@ func (h *handler) PlaceOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.Write(w, http.StatusCreated, createdOrder)
+
+}
+
+func (h *handler) FindOrderByID(w http.ResponseWriter, r *http.Request) {
+
+	idStr := chi.URLParam(r, "id")
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		slog.Error("invalid order id", "id", idStr, "error", err)
+		json.WriteError(w, http.StatusBadRequest, "invalid order id")
+		return
+	}
+
+	order, err := h.service.FindOrderByID(r.Context(), id)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			slog.Error("order not found", "error", "NotFound")
+			json.WriteError(w, http.StatusNotFound, "order not found")
+			return
+		}
+		slog.Error("error fetching order", "error", err)
+		json.WriteError(w, http.StatusInternalServerError, "error fetching order")
+		return
+	}
+
+	json.Write(w, http.StatusOK, order)
 
 }

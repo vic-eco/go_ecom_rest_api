@@ -33,7 +33,7 @@ func (h *handler) FindProductByID(w http.ResponseWriter, r *http.Request) {
 
 	idStr := chi.URLParam(r, "id")
 
-	id, err := strconv.Atoi(idStr)
+	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		slog.Error("invalid product id", "id", idStr, "error", err)
 		json.WriteError(w, http.StatusBadRequest, "invalid product id")

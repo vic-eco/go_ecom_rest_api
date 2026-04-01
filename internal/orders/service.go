@@ -2,6 +2,8 @@ package orders
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	myErr "github.com/vic-eco/go_ecom_rest_api/internal/errors"
@@ -10,6 +12,7 @@ import (
 
 type Service interface {
 	PlaceOrder(ctx context.Context, order createOrderParams) (repo.Order, error)
+	FindOrderByID(ctx context.Context, id int64) (OrderResponse, error)
 }
 
 type svc struct {
@@ -71,4 +74,33 @@ func (s *svc) PlaceOrder(ctx context.Context, tempOrder createOrderParams) (repo
 	tx.Commit(ctx)
 
 	return order, nil
+}
+
+func (s *svc) FindOrderByID(ctx context.Context, id int64) (OrderResponse, error) {
+	order, err := s.repo.FindOrderByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return OrderResponse{}, myErr.ErrNotFound
+		}
+		return OrderResponse{}, err
+	}
+
+	orderItems, err := s.repo.GetOrderItemsByOrderID(ctx, order.ID)
+	if err != nil {
+		return OrderResponse{}, err
+	}
+
+	var response OrderResponse
+	response.ID = order.ID
+	response.CreatedAt = order.CreatedAt
+	response.Products = make([]OrderProduct, 0, len(orderItems))
+	for _, item := range orderItems {
+		response.Products = append(response.Products, OrderProduct{
+			Name:       item.ProductName,
+			Quantity:   item.Quantity,
+			PriceCents: item.PriceCents,
+		})
+	}
+
+	return response, nil
 }

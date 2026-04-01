@@ -55,3 +55,59 @@ func (q *Queries) CreateOrderItem(ctx context.Context, arg CreateOrderItemParams
 	)
 	return i, err
 }
+
+const findOrderByID = `-- name: FindOrderByID :one
+SELECT id, customer_id, created_at
+FROM orders
+WHERE id = $1
+`
+
+func (q *Queries) FindOrderByID(ctx context.Context, id int64) (Order, error) {
+	row := q.db.QueryRow(ctx, findOrderByID, id)
+	var i Order
+	err := row.Scan(&i.ID, &i.CustomerID, &i.CreatedAt)
+	return i, err
+}
+
+const getOrderItemsByOrderID = `-- name: GetOrderItemsByOrderID :many
+SELECT
+    oi.order_id,
+    p.name AS product_name,
+    oi.quantity,
+    oi.price_cents
+FROM order_items oi
+JOIN products p ON p.id = oi.product_id
+WHERE oi.order_id = $1
+`
+
+type GetOrderItemsByOrderIDRow struct {
+	OrderID     int64  `json:"order_id"`
+	ProductName string `json:"product_name"`
+	Quantity    int32  `json:"quantity"`
+	PriceCents  int32  `json:"price_cents"`
+}
+
+func (q *Queries) GetOrderItemsByOrderID(ctx context.Context, orderID int64) ([]GetOrderItemsByOrderIDRow, error) {
+	rows, err := q.db.Query(ctx, getOrderItemsByOrderID, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetOrderItemsByOrderIDRow
+	for rows.Next() {
+		var i GetOrderItemsByOrderIDRow
+		if err := rows.Scan(
+			&i.OrderID,
+			&i.ProductName,
+			&i.Quantity,
+			&i.PriceCents,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
