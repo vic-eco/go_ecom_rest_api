@@ -28,8 +28,10 @@ A minimal e-commerce API built with **Go**, designed to manage products and orde
 ---
 ## Next Steps
 
-The next step for this API is to implement authentication and authorization, ensuring that:
+The next steps for this API are:
+1. Implement **authentication** and **authorization**, ensuring that:
  - Users must log in to place orders or manage products.
  - Only authorized users (e.g., admins) can create or update products.
+2. Implement more **endpoints**.
+3. Add **rate limiting**.
 
-And also implement more endpoints.
